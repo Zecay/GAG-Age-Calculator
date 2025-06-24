@@ -168,6 +168,7 @@
     #countdown {
       margin-top: 10px;
       font-weight: 600;
+      text-align: center;
     }
   </style>
 </head>
@@ -194,7 +195,6 @@
 
   <button id="calculateBtn">Calculate Time</button>
   <div class="warning" id="warning"></div>
-
   <div class="result" id="output"></div>
   <div id="countdown"></div>
 
@@ -209,6 +209,7 @@
     const countdown = document.getElementById('countdown');
     const warning = document.getElementById('warning');
 
+    // Default: Dark mode
     document.body.classList.remove('light');
     modeToggle.textContent = '🌙';
 
