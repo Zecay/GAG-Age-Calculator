@@ -209,7 +209,6 @@
     const countdown = document.getElementById('countdown');
     const warning = document.getElementById('warning');
 
-    // Default: Dark mode
     document.body.classList.remove('light');
     modeToggle.textContent = '🌙';
 
@@ -285,9 +284,14 @@
       const totalSeconds = Math.floor(totalXP / rate);
       let remaining = totalSeconds;
 
+      const days = Math.floor(totalSeconds / 86400);
+      const hours = Math.floor((totalSeconds % 86400) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
       output.innerHTML = `
         🧪 <strong>Total XP Required:</strong> ${formatWithDots(totalXP)} XP<br/>
-        ⏳ <strong>Estimated Time:</strong> Countdown below...
+        ⏳ <strong>Estimated Time:</strong> ${days}d ${hours}h ${minutes}m ${seconds}s
       `;
       output.classList.add('visible');
 
@@ -310,5 +314,7 @@
       countdownInterval = setInterval(updateCountdown, 1000);
     });
   </script>
+</body>
+</html>
 </body>
 </html>
