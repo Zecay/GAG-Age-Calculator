@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>GAG Pet Age Calculator</title>
+  <title>GAG Pet Age Calculator v1</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
   <style>
     :root {
@@ -210,7 +210,7 @@
     <div id="xpBar" class="xp-bar"></div>
   </div>
   <div class="xp-label" id="xpLabel">—</div>
-  <div class="xp-label" id="nextLevelTimer">—</div>
+  <div class="xp-label" id="nextLevelCountdown"></div>
 
   <div class="credit">🛠 Made with 💚 – 2025</div>
 
@@ -222,8 +222,7 @@
     const countdown = document.getElementById('countdown');
     const xpBar = document.getElementById('xpBar');
     const xpLabel = document.getElementById('xpLabel');
-    const nextLevelTimer = document.getElementById('nextLevelTimer');
-    let countdownInterval, xpInterval, nextLevelInterval;
+    const nextLevelCountdown = document.getElementById('nextLevelCountdown');
 
     modeToggle.addEventListener('click', () => {
       document.body.classList.toggle('light');
@@ -242,14 +241,12 @@
     }
 
     calculateBtn.addEventListener('click', () => {
-      clearInterval(countdownInterval);
-      clearInterval(xpInterval);
-      clearInterval(nextLevelInterval);
       warning.textContent = '';
       output.classList.remove('visible');
       xpBar.style.width = '0%';
       xpLabel.textContent = '—';
-      nextLevelTimer.textContent = '—';
+      nextLevelCountdown.textContent = '';
+      cancelAnimationFrame(animationId);
 
       const inputStartAge = +document.getElementById('currentAge').value;
       const inputTargetAge = +document.getElementById('targetAge').value;
@@ -284,104 +281,56 @@
       output.classList.add('visible');
 
       countdown.textContent = `⏳ Time left: ${formatTime(remainingSec)}`;
-      countdownInterval = setInterval(() => {
-        remainingSec--;
-        countdown.textContent = remainingSec > 0
-          ? `⏳ Time left: ${formatTime(remainingSec)}`
-          : '🎉 Done!';
-        if (remainingSec <= 0) clearInterval(countdownInterval);
-      }, 1000);
 
+      const startTime = Date.now();
       let xpNeeded = xpForAge(age + 1);
-
       currXP = Math.min(currXP, xpNeeded);
-      xpLabel.textContent = `Level ${age + 1} → ${age + 2}: ${Math.floor(currXP)}/${xpNeeded} XP`;
-      xpBar.style.width = `${(currXP / xpNeeded) * 100}%`;
 
-      // New: function to update next level timer
-      function updateNextLevelTimer() {
-        let xpLeft = xpNeeded - currXP;
-        if (xpLeft <= 0) {
-          nextLevelTimer.textContent = 'Level up!';
-          return;
-        }
-        let secLeft = Math.ceil(xpLeft / rate);
-        nextLevelTimer.textContent = `Next level in: ${formatTime(secLeft)}`;
-      }
+      function update() {
+        const elapsed = (Date.now() - startTime) / 1000; // seconds
+        let totalXPgained = rate * elapsed + currXP;
 
-      updateNextLevelTimer();
-
-      xpInterval = setInterval(() => {
-        currXP += rate / 10; // add XP every 0.1 sec
-        if (currXP >= xpNeeded) {
-          currXP -= xpNeeded;
+        // Advance levels if XP threshold passed
+        while (totalXPgained >= xpNeeded) {
+          totalXPgained -= xpNeeded;
           age++;
           xpBar.classList.add('level-up');
           xpLabel.classList.add('level-up');
-          nextLevelTimer.textContent = 'Level up!';
-
           setTimeout(() => {
             xpBar.classList.remove('level-up');
             xpLabel.classList.remove('level-up');
           }, 500);
-
           if (age >= targetAge) {
             xpBar.style.width = '100%';
             xpLabel.textContent = `Level ${age + 1} reached!`;
-            nextLevelTimer.textContent = 'Level max reached!';
-            clearInterval(xpInterval);
-            clearInterval(nextLevelInterval);
-            createConfetti();
-            return;
+            countdown.textContent = '🎉 Done!';
+            nextLevelCountdown.textContent = '';
+            return; // stop updating
           }
           xpNeeded = xpForAge(age + 1);
         }
-        xpBar.style.width = `${(currXP / xpNeeded) * 100}%`;
-        xpLabel.textContent = `Level ${age + 1} → ${age + 2}: ${Math.floor(currXP)}/${xpNeeded} XP`;
-        updateNextLevelTimer();
-      }, 100);
 
-    });
+        // Update XP bar and label
+        xpBar.style.width = `${(totalXPgained / xpNeeded) * 100}%`;
+        xpLabel.textContent = `Level ${age + 1} → ${age + 2}: ${Math.floor(totalXPgained)}/${xpNeeded} XP`;
 
-    function createConfetti() {
-      const colors = ['#00e0ff', '#ff4c4c', '#ffd700', '#7fff00', '#ff69b4'];
-      const container = document.createElement('div');
-      Object.assign(container.style, {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        pointerEvents: 'none',
-        zIndex: 9999,
-      });
-      document.body.appendChild(container);
-      for (let i = 0; i < 150; i++) {
-        const c = document.createElement('div');
-        Object.assign(c.style, {
-          position: 'absolute',
-          width: '8px',
-          height: '8px',
-          background: colors[Math.floor(Math.random() * colors.length)],
-          borderRadius: '50%',
-          left: `${Math.random() * 100}vw`,
-          top: '-10px',
-        });
-        container.appendChild(c);
-        c.animate(
-          [
-            { transform: 'translateY(0)', opacity: 1 },
-            { transform: `translateY(100vh)`, opacity: 0 },
-          ],
-          {
-            duration: 2000 + Math.random() * 2000,
-            easing: 'ease-out',
-            fill: 'forwards',
-          }
-        );
+        // Next level countdown
+        const secondsToNextLevel = Math.ceil((xpNeeded - totalXPgained) / rate);
+        nextLevelCountdown.textContent = `Next level in: ${formatTime(secondsToNextLevel)}`;
+
+        // Main countdown to target
+        const secondsLeft = Math.ceil((totalXPtoTarget - (rate * elapsed + currXP)) / rate);
+        countdown.textContent = secondsLeft > 0
+          ? `⏳ Time left: ${formatTime(secondsLeft)}`
+          : '🎉 Done!';
+
+        if (secondsLeft <= 0) return; // stop update
+
+        animationId = requestAnimationFrame(update);
       }
-      setTimeout(() => container.remove(), 5000);
-    }
+
+      let animationId = requestAnimationFrame(update);
+    });
   </script>
 </body>
 </html>
