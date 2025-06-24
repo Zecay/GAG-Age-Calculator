@@ -241,7 +241,7 @@
 
     calculateBtn.addEventListener('click', () => {
       clearInterval(countdownInterval);
-      clearInterval(xpInterval);
+      cancelAnimationFrame(xpInterval);
       warning.textContent = '';
       output.classList.remove('visible');
       xpBar.style.width = '0%';
@@ -290,13 +290,18 @@
 
       let xpNeeded = xpForAge(age + 1);
 
-      // We'll track XP as a float and increment every 0.1s by (rate / 10)
       currXP = Math.min(currXP, xpNeeded);
       xpLabel.textContent = `Level ${age + 1} → ${age + 2}: ${Math.floor(currXP)}/${xpNeeded} XP`;
       xpBar.style.width = `${(currXP / xpNeeded) * 100}%`;
 
-      xpInterval = setInterval(() => {
-        currXP += rate / 10; // add XP every 0.1 sec
+      let lastTimestamp = null;
+
+      function updateXP(timestamp) {
+        if (!lastTimestamp) lastTimestamp = timestamp;
+        const delta = (timestamp - lastTimestamp) / 1000; // seconds elapsed
+        lastTimestamp = timestamp;
+
+        currXP += rate * delta;
         if (currXP >= xpNeeded) {
           currXP -= xpNeeded;
           age++;
@@ -309,16 +314,18 @@
           if (age >= targetAge) {
             xpBar.style.width = '100%';
             xpLabel.textContent = `Level ${age + 1} reached!`;
-            clearInterval(xpInterval);
             createConfetti();
-            return;
+            return; // stop updating
           }
           xpNeeded = xpForAge(age + 1);
         }
+
         xpBar.style.width = `${(currXP / xpNeeded) * 100}%`;
         xpLabel.textContent = `Level ${age + 1} → ${age + 2}: ${Math.floor(currXP)}/${xpNeeded} XP`;
-      }, 100);
 
+        xpInterval = requestAnimationFrame(updateXP);
+      }
+      xpInterval = requestAnimationFrame(updateXP);
     });
 
     function createConfetti() {
