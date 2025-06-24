@@ -210,6 +210,7 @@
     <div id="xpBar" class="xp-bar"></div>
   </div>
   <div class="xp-label" id="xpLabel">—</div>
+  <div class="xp-label" id="nextLevelTimer">—</div>
 
   <div class="credit">🛠 Made with 💚 – 2025</div>
 
@@ -221,7 +222,8 @@
     const countdown = document.getElementById('countdown');
     const xpBar = document.getElementById('xpBar');
     const xpLabel = document.getElementById('xpLabel');
-    let countdownInterval, xpInterval;
+    const nextLevelTimer = document.getElementById('nextLevelTimer');
+    let countdownInterval, xpInterval, nextLevelInterval;
 
     modeToggle.addEventListener('click', () => {
       document.body.classList.toggle('light');
@@ -241,11 +243,13 @@
 
     calculateBtn.addEventListener('click', () => {
       clearInterval(countdownInterval);
-      cancelAnimationFrame(xpInterval);
+      clearInterval(xpInterval);
+      clearInterval(nextLevelInterval);
       warning.textContent = '';
       output.classList.remove('visible');
       xpBar.style.width = '0%';
       xpLabel.textContent = '—';
+      nextLevelTimer.textContent = '—';
 
       const inputStartAge = +document.getElementById('currentAge').value;
       const inputTargetAge = +document.getElementById('targetAge').value;
@@ -294,38 +298,49 @@
       xpLabel.textContent = `Level ${age + 1} → ${age + 2}: ${Math.floor(currXP)}/${xpNeeded} XP`;
       xpBar.style.width = `${(currXP / xpNeeded) * 100}%`;
 
-      let lastTimestamp = null;
+      // New: function to update next level timer
+      function updateNextLevelTimer() {
+        let xpLeft = xpNeeded - currXP;
+        if (xpLeft <= 0) {
+          nextLevelTimer.textContent = 'Level up!';
+          return;
+        }
+        let secLeft = Math.ceil(xpLeft / rate);
+        nextLevelTimer.textContent = `Next level in: ${formatTime(secLeft)}`;
+      }
 
-      function updateXP(timestamp) {
-        if (!lastTimestamp) lastTimestamp = timestamp;
-        const delta = (timestamp - lastTimestamp) / 1000; // seconds elapsed
-        lastTimestamp = timestamp;
+      updateNextLevelTimer();
 
-        currXP += rate * delta;
+      xpInterval = setInterval(() => {
+        currXP += rate / 10; // add XP every 0.1 sec
         if (currXP >= xpNeeded) {
           currXP -= xpNeeded;
           age++;
           xpBar.classList.add('level-up');
           xpLabel.classList.add('level-up');
+          nextLevelTimer.textContent = 'Level up!';
+
           setTimeout(() => {
             xpBar.classList.remove('level-up');
             xpLabel.classList.remove('level-up');
           }, 500);
+
           if (age >= targetAge) {
             xpBar.style.width = '100%';
             xpLabel.textContent = `Level ${age + 1} reached!`;
+            nextLevelTimer.textContent = 'Level max reached!';
+            clearInterval(xpInterval);
+            clearInterval(nextLevelInterval);
             createConfetti();
-            return; // stop updating
+            return;
           }
           xpNeeded = xpForAge(age + 1);
         }
-
         xpBar.style.width = `${(currXP / xpNeeded) * 100}%`;
         xpLabel.textContent = `Level ${age + 1} → ${age + 2}: ${Math.floor(currXP)}/${xpNeeded} XP`;
+        updateNextLevelTimer();
+      }, 100);
 
-        xpInterval = requestAnimationFrame(updateXP);
-      }
-      xpInterval = requestAnimationFrame(updateXP);
     });
 
     function createConfetti() {
