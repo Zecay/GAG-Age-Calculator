@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>GAG Pet Age Calculator — Fixed</title>
+  <title>GAG Pet Age Calculator — Smooth XP Bar</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
   <style>
     :root {
@@ -247,7 +247,6 @@
       xpBar.style.width = '0%';
       xpLabel.textContent = '—';
 
-      // Internally subtract 1 from ages for calculation
       const inputStartAge = +document.getElementById('currentAge').value;
       const inputTargetAge = +document.getElementById('targetAge').value;
       const startAge = inputStartAge - 1;
@@ -290,11 +289,14 @@
       }, 1000);
 
       let xpNeeded = xpForAge(age + 1);
+
+      // We'll track XP as a float and increment every 0.1s by (rate / 10)
+      currXP = Math.min(currXP, xpNeeded);
       xpLabel.textContent = `Level ${age + 1} → ${age + 2}: ${Math.floor(currXP)}/${xpNeeded} XP`;
       xpBar.style.width = `${(currXP / xpNeeded) * 100}%`;
 
       xpInterval = setInterval(() => {
-        currXP += rate;
+        currXP += rate / 10; // add XP every 0.1 sec
         if (currXP >= xpNeeded) {
           currXP -= xpNeeded;
           age++;
@@ -315,7 +317,8 @@
         }
         xpBar.style.width = `${(currXP / xpNeeded) * 100}%`;
         xpLabel.textContent = `Level ${age + 1} → ${age + 2}: ${Math.floor(currXP)}/${xpNeeded} XP`;
-      }, 1000);
+      }, 100);
+
     });
 
     function createConfetti() {
