@@ -5,29 +5,65 @@
   <title>GAG Pet Age Calculator</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
   <style>
+    :root {
+      --bg-color: #121212;
+      --text-color: #f1f1f1;
+      --heading-color: #00e0ff;
+      --subheading-color: #aaa;
+      --input-bg: #1e1e1e;
+      --input-focus-bg: #292929;
+      --input-text: #f1f1f1;
+      --btn-bg-start: #00e0ff;
+      --btn-bg-hover: #00c4e4;
+      --result-bg: #1d1d1d;
+      --credit-color: #666;
+      --input-border: transparent;
+    }
+
+    body.light {
+      --bg-color: #fff;
+      --text-color: #222;
+      --heading-color: #007ea7;
+      --subheading-color: #555;
+      --input-bg: #fff;
+      --input-focus-bg: #d0f0ff;
+      --input-text: #222;
+      --btn-bg-start: #007ea7;
+      --btn-bg-hover: #005f7a;
+      --result-bg: #e3f2fd;
+      --credit-color: #999;
+      --input-border: #a0cfff;
+    }
+
     body {
-      background-color: #121212;
-      color: #f1f1f1;
+      background-color: var(--bg-color);
+      color: var(--text-color);
       font-family: 'Inter', sans-serif;
       padding: 40px;
       max-width: 700px;
       margin: auto;
+      transition: background-color 0.4s ease, color 0.4s ease;
+      overflow-x: hidden;
+      position: relative;
+      min-height: 100vh;
     }
 
     h1 {
       font-family: 'Orbitron', sans-serif;
       font-size: 32px;
-      color: #00e0ff;
+      color: var(--heading-color);
       text-align: center;
       margin-bottom: 5px;
+      transition: color 0.4s ease;
     }
 
     h2 {
       font-weight: 400;
       font-size: 16px;
       text-align: center;
-      color: #aaa;
+      color: var(--subheading-color);
       margin-bottom: 30px;
+      transition: color 0.4s ease;
     }
 
     .input-group {
@@ -45,23 +81,30 @@
     label {
       margin-bottom: 5px;
       font-weight: 600;
+      transition: color 0.4s ease;
     }
 
     input {
       padding: 10px;
       font-size: 16px;
       border-radius: 6px;
-      border: none;
+      border: 1.5px solid var(--input-border);
       outline: none;
-      background-color: #1e1e1e;
-      color: #fff;
+      background-color: var(--input-bg);
+      color: var(--input-text);
+      transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    }
+
+    input:focus {
+      background-color: var(--input-focus-bg);
+      border-color: var(--btn-bg-start);
     }
 
     button {
       width: 100%;
       padding: 12px;
       font-size: 16px;
-      background-color: #00e0ff;
+      background-color: var(--btn-bg-start);
       color: #000;
       border: none;
       border-radius: 8px;
@@ -70,91 +113,251 @@
       transition: background-color 0.3s ease;
     }
 
-    button:hover {
-      background-color: #00c4e4;
+    button:hover:not(:disabled) {
+      background-color: var(--btn-bg-hover);
+    }
+
+    button:disabled {
+      background-color: #666;
+      cursor: not-allowed;
+      color: #333;
     }
 
     .result {
       margin-top: 30px;
       font-size: 18px;
-      background: #1d1d1d;
+      background: var(--result-bg);
       padding: 20px;
       border-radius: 10px;
       line-height: 1.6;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      user-select: none;
+    }
+
+    .result.visible {
+      opacity: 1;
     }
 
     .credit {
       text-align: center;
       margin-top: 40px;
-      color: #666;
+      color: var(--credit-color);
       font-size: 14px;
+      transition: color 0.4s ease;
+    }
+
+    /* Dark/Light mode toggle styles */
+    #modeToggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: #00e0ff;
+      border: none;
+      border-radius: 20px;
+      width: 60px;
+      height: 32px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: #000;
+      transition: background-color 0.3s ease;
+      user-select: none;
+      z-index: 10000;
+    }
+    #modeToggle:hover {
+      background-color: #00c4e4;
     }
   </style>
 </head>
 <body>
+  <button id="modeToggle" aria-label="Toggle dark/light mode">🌙</button>
+
   <h1>GAG Pet Age Calculator</h1>
   <h2>by Zecay 🤘 (code & logic by Zecay ⚡️)</h2>
 
   <div class="input-group">
     <div class="input-field">
       <label for="currentAge">Current Age</label>
-      <input type="number" id="currentAge" />
+      <input type="number" id="currentAge" min="0" />
     </div>
     <div class="input-field">
       <label for="targetAge">Target Age</label>
-      <input type="number" id="targetAge" />
+      <input type="number" id="targetAge" min="0" />
     </div>
     <div class="input-field">
       <label for="xps">Pet XP/s</label>
-      <input type="number" step="0.01" id="xps" />
+      <input type="number" step="0.01" id="xps" min="0" />
     </div>
   </div>
 
-  <button onclick="calculate()">Calculate Time</button>
+  <button id="calculateBtn" disabled>Calculate Time</button>
 
   <div class="result" id="output"></div>
+  <div id="countdown" style="margin-top: 10px; font-weight: 600;"></div>
 
   <div class="credit">
     🛠 Made with 💚 for Grow a Garden players – Zecay 2025
   </div>
 
   <script>
+    // Start in dark mode
+    document.body.classList.remove('light');
+
+    const modeToggle = document.getElementById('modeToggle');
+    const calculateBtn = document.getElementById('calculateBtn');
+    const output = document.getElementById('output');
+    const countdown = document.getElementById('countdown');
+    const currentAgeInput = document.getElementById('currentAge');
+    const targetAgeInput = document.getElementById('targetAge');
+    const xpsInput = document.getElementById('xps');
+
+    // XP calculation for age
     function xpForAge(age) {
       return Math.floor(20 * Math.pow(age, 2.02));
     }
 
+    // Format numbers with dots as thousand separators
     function formatWithDots(x) {
       return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     }
 
-    function calculate() {
-      const a = parseInt(document.getElementById("currentAge").value);
-      const b = parseInt(document.getElementById("targetAge").value);
-      const rate = parseFloat(document.getElementById("xps").value);
+    // Validate inputs and enable/disable button
+    function validateInputs() {
+      const a = parseInt(currentAgeInput.value);
+      const b = parseInt(targetAgeInput.value);
+      const rate = parseFloat(xpsInput.value);
 
-      const output = document.getElementById("output");
+      if (!isNaN(a) && !isNaN(b) && !isNaN(rate) && b > a && rate > 0) {
+        calculateBtn.disabled = false;
+      } else {
+        calculateBtn.disabled = true;
+      }
+    }
+
+    currentAgeInput.addEventListener('input', validateInputs);
+    targetAgeInput.addEventListener('input', validateInputs);
+    xpsInput.addEventListener('input', validateInputs);
+
+    let countdownInterval = null;
+
+    // Confetti effect
+    function createConfetti() {
+      const confettiCount = 150;
+      const colors = ['#00e0ff', '#ff4c4c', '#ffd700', '#7fff00', '#ff69b4'];
+      const container = document.createElement('div');
+      container.style.position = 'fixed';
+      container.style.top = '0';
+      container.style.left = '0';
+      container.style.width = '100vw';
+      container.style.height = '100vh';
+      container.style.pointerEvents = 'none';
+      container.style.overflow = 'visible';
+      container.style.zIndex = '9999';
+      document.body.appendChild(container);
+
+      for (let i = 0; i < confettiCount; i++) {
+        const confetti = document.createElement('div');
+        confetti.style.position = 'absolute';
+        confetti.style.width = '8px';
+        confetti.style.height = '8px';
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.borderRadius = '50%';
+        confetti.style.left = Math.random() * window.innerWidth + 'px';
+        confetti.style.top = '-10px';
+        confetti.style.opacity = Math.random() + 0.5;
+        confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+        confetti.style.willChange = 'transform, opacity';
+
+        container.appendChild(confetti);
+
+        const fallDuration = 3000 + Math.random() * 2000;
+        const horizontalMovement = (Math.random() - 0.5) * 200;
+
+        confetti.animate([
+          { transform: `translateX(0) translateY(0) rotate(${Math.random() * 360}deg)`, opacity: 1 },
+          { transform: `translateX(${horizontalMovement}px) translateY(${window.innerHeight + 20}px) rotate(${Math.random() * 360 + 720}deg)`, opacity: 0 }
+        ], {
+          duration: fallDuration,
+          easing: 'ease-out',
+          fill: 'forwards',
+        });
+      }
+
+      setTimeout(() => {
+        container.remove();
+      }, 6000);
+    }
+
+    // Calculate function with countdown
+    function calculate() {
+      clearInterval(countdownInterval);
+      countdown.textContent = "";
+      output.classList.remove('visible');
+      output.innerHTML = "";
+
+      const a = parseInt(currentAgeInput.value);
+      const b = parseInt(targetAgeInput.value);
+      const rate = parseFloat(xpsInput.value);
+
       if (isNaN(a) || isNaN(b) || isNaN(rate) || b <= a || rate <= 0) {
         output.innerHTML = "⚠️ Please enter valid values.";
+        output.classList.add('visible');
         return;
       }
 
-      let totalXP = xpForAge(a + 1); // start with remaining xp for next age
-      for (let i = a + 2; i <= b; i++) {
+      let totalXP = 0;
+      for (let i = a + 1; i <= b; i++) {
         totalXP += xpForAge(i);
       }
 
       const totalSeconds = totalXP / rate;
-      const days = Math.floor(totalSeconds / 86400);
-      const hours = Math.floor((totalSeconds % 86400) / 3600);
-      const minutes = Math.floor((totalSeconds % 3600) / 60);
-      const seconds = Math.floor(totalSeconds % 60);
 
       output.innerHTML = `
         🧪 <strong>Total XP Required:</strong> ${formatWithDots(Math.round(totalXP))} XP<br/>
-        ⏳ <strong>Estimated Time:</strong><br/>
-        ${days} days, ${hours} hours, ${minutes} minutes, ${seconds} seconds
+        ⏳ <strong>Estimated Time:</strong> Calculating countdown...
       `;
+      output.classList.add('visible');
+
+      let remainingSeconds = Math.floor(totalSeconds);
+
+      function updateCountdown() {
+        if (remainingSeconds <= 0) {
+          countdown.textContent = "🎉 Target age reached!";
+          clearInterval(countdownInterval);
+          createConfetti();
+          return;
+        }
+
+        const days = Math.floor(remainingSeconds / 86400);
+        const hours = Math.floor((remainingSeconds % 86400) / 3600);
+        const minutes = Math.floor((remainingSeconds % 3600) / 60);
+        const seconds = remainingSeconds % 60;
+
+        countdown.textContent = `⏳ Time left: ${days}d ${hours}h ${minutes}m ${seconds}s`;
+        remainingSeconds--;
+      }
+
+      updateCountdown();
+      countdownInterval = setInterval(updateCountdown, 1000);
     }
+
+    calculateBtn.addEventListener('click', calculate);
+
+    modeToggle.addEventListener('click', () => {
+      if (document.body.classList.contains('light')) {
+        document.body.classList.remove('light');
+        modeToggle.textContent = '🌙';
+      } else {
+        document.body.classList.add('light');
+        modeToggle.textContent = '🌞';
+      }
+    });
+
+    // Initialize toggle icon
+    modeToggle.textContent = '🌙';
   </script>
 </body>
 </html>
