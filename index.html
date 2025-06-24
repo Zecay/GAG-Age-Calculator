@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>GAG Pet Age Calculator</title>
+  <title>GAG Pet Age Calculator v2</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
   <style>
     :root {
@@ -45,14 +45,12 @@
       gap: 20px;
       margin-bottom: 20px;
       align-items: flex-end;
-      flex-wrap: wrap;
     }
     .input-group {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 20px;
       flex: 1;
-      min-width: 0;
     }
     .input-field {
       display: flex;
@@ -132,7 +130,6 @@
       align-items: center;
       justify-content: center;
       transition: background 0.3s;
-      user-select: none;
     }
     #modeToggle:hover {
       background: var(--btn-hover);
@@ -213,7 +210,7 @@
     <div id="xpBar" class="xp-bar"></div>
   </div>
   <div class="xp-label" id="xpLabel">—</div>
-  <div class="xp-label" id="nextLevelCountdown"></div>
+  <div class="xp-label" id="nextLevelTimer">—</div>
 
   <div class="credit">🛠 Made with 💚 – 2025</div>
 
@@ -225,8 +222,8 @@
     const countdown = document.getElementById('countdown');
     const xpBar = document.getElementById('xpBar');
     const xpLabel = document.getElementById('xpLabel');
-    const nextLevelCountdown = document.getElementById('nextLevelCountdown');
-    let animationId;
+    const nextLevelTimer = document.getElementById('nextLevelTimer');
+    let countdownInterval, xpInterval, nextLevelInterval;
 
     modeToggle.addEventListener('click', () => {
       document.body.classList.toggle('light');
@@ -237,7 +234,6 @@
       return Math.floor(20 * Math.pow(age, 2.02));
     }
     function formatTime(sec) {
-      sec = Math.max(0, Math.floor(sec));
       const d = Math.floor(sec / 86400);
       const h = Math.floor((sec % 86400) / 3600);
       const m = Math.floor((sec % 3600) / 60);
@@ -246,15 +242,20 @@
     }
 
     calculateBtn.addEventListener('click', () => {
+      clearInterval(countdownInterval);
+      clearInterval(xpInterval);
+      clearInterval(nextLevelInterval);
       warning.textContent = '';
       output.classList.remove('visible');
       xpBar.style.width = '0%';
       xpLabel.textContent = '—';
-      nextLevelCountdown.textContent = '';
-      cancelAnimationFrame(animationId);
+      nextLevelTimer.textContent = '—';
 
       const inputStartAge = +document.getElementById('currentAge').value;
       const inputTargetAge = +document.getElementById('targetAge').value;
+      const startAge = inputStartAge - 1;
+      const targetAge = inputTargetAge - 1;
+
       const rate = +document.getElementById('xps').value;
       let currXP = +document.getElementById('currentXP').value || 0;
 
@@ -262,28 +263,19 @@
         !Number.isFinite(inputStartAge) ||
         !Number.isFinite(inputTargetAge) ||
         !Number.isFinite(rate) ||
-        inputTargetAge <= inputStartAge ||
+        targetAge <= startAge ||
         rate <= 0
       ) {
         warning.textContent = '⚠️ Please check your inputs.';
         return;
       }
 
-      // Internal zero-based age
-      let age = inputStartAge - 1;
-      const targetAge = inputTargetAge - 1;
-
-      // Total XP needed from current level to target level
-      let totalXPtoTarget = 0;
-      for (let a = age + 1; a <= targetAge; a++) {
-        totalXPtoTarget += xpForAge(a);
-      }
-
-      let xpNeeded = xpForAge(age + 1);
-      if (currXP > xpNeeded) currXP = xpNeeded;
-
-      let remainingXP = totalXPtoTarget - currXP;
-      let remainingSec = remainingXP / rate;
+      let age = startAge;
+      const totalXPtoTarget = [...Array(targetAge - startAge)]
+        .map((_, i) => xpForAge(startAge + i + 1))
+        .reduce((a, b) => a + b, 0);
+      const remainingXP = totalXPtoTarget - currXP;
+      let remainingSec = Math.floor(remainingXP / rate);
 
       output.innerHTML = `
         🧪 <strong>Total XP Remaining</strong>: ${remainingXP.toLocaleString()} XP<br>
@@ -292,50 +284,104 @@
       output.classList.add('visible');
 
       countdown.textContent = `⏳ Time left: ${formatTime(remainingSec)}`;
-
-      const startTime = Date.now();
-
-      function update() {
-        const elapsed = (Date.now() - startTime) / 1000; // seconds
-        let totalXPgained = currXP + rate * elapsed;
-
-        // Advance levels
-        while (totalXPgained >= xpNeeded && age < targetAge) {
-          totalXPgained -= xpNeeded;
-          age++;
-          xpNeeded = xpForAge(age + 1);
-          // Optional: small flash or animation on level up can be added here
-        }
-
-        if (age >= targetAge) {
-          xpBar.style.width = '100%';
-          xpLabel.textContent = `Level ${age + 1} reached!`;
-          countdown.textContent = '🎉 Done!';
-          nextLevelCountdown.textContent = '';
-          return; // stop animation
-        }
-
-        // Update XP bar & label
-        xpBar.style.width = `${(totalXPgained / xpNeeded) * 100}%`;
-        xpLabel.textContent = `Level ${age + 1} → ${age + 2}: ${Math.floor(totalXPgained).toLocaleString()}/${xpNeeded.toLocaleString()} XP`;
-
-        // Next level countdown
-        const secondsToNextLevel = (xpNeeded - totalXPgained) / rate;
-        nextLevelCountdown.textContent = `Next level in: ${formatTime(secondsToNextLevel)}`;
-
-        // Main countdown to target
-        const secondsLeft = (totalXPtoTarget - (rate * elapsed + currXP)) / rate;
-        countdown.textContent = secondsLeft > 0
-          ? `⏳ Time left: ${formatTime(secondsLeft)}`
+      countdownInterval = setInterval(() => {
+        remainingSec--;
+        countdown.textContent = remainingSec > 0
+          ? `⏳ Time left: ${formatTime(remainingSec)}`
           : '🎉 Done!';
+        if (remainingSec <= 0) clearInterval(countdownInterval);
+      }, 1000);
 
-        if (secondsLeft <= 0) return;
+      let xpNeeded = xpForAge(age + 1);
 
-        animationId = requestAnimationFrame(update);
+      currXP = Math.min(currXP, xpNeeded);
+      xpLabel.textContent = `Level ${age + 1} → ${age + 2}: ${Math.floor(currXP)}/${xpNeeded} XP`;
+      xpBar.style.width = `${(currXP / xpNeeded) * 100}%`;
+
+      // New: function to update next level timer
+      function updateNextLevelTimer() {
+        let xpLeft = xpNeeded - currXP;
+        if (xpLeft <= 0) {
+          nextLevelTimer.textContent = 'Level up!';
+          return;
+        }
+        let secLeft = Math.ceil(xpLeft / rate);
+        nextLevelTimer.textContent = `Next level in: ${formatTime(secLeft)}`;
       }
 
-      animationId = requestAnimationFrame(update);
+      updateNextLevelTimer();
+
+      xpInterval = setInterval(() => {
+        currXP += rate / 10; // add XP every 0.1 sec
+        if (currXP >= xpNeeded) {
+          currXP -= xpNeeded;
+          age++;
+          xpBar.classList.add('level-up');
+          xpLabel.classList.add('level-up');
+          nextLevelTimer.textContent = 'Level up!';
+
+          setTimeout(() => {
+            xpBar.classList.remove('level-up');
+            xpLabel.classList.remove('level-up');
+          }, 500);
+
+          if (age >= targetAge) {
+            xpBar.style.width = '100%';
+            xpLabel.textContent = `Level ${age + 1} reached!`;
+            nextLevelTimer.textContent = 'Level max reached!';
+            clearInterval(xpInterval);
+            clearInterval(nextLevelInterval);
+            createConfetti();
+            return;
+          }
+          xpNeeded = xpForAge(age + 1);
+        }
+        xpBar.style.width = `${(currXP / xpNeeded) * 100}%`;
+        xpLabel.textContent = `Level ${age + 1} → ${age + 2}: ${Math.floor(currXP)}/${xpNeeded} XP`;
+        updateNextLevelTimer();
+      }, 100);
+
     });
+
+    function createConfetti() {
+      const colors = ['#00e0ff', '#ff4c4c', '#ffd700', '#7fff00', '#ff69b4'];
+      const container = document.createElement('div');
+      Object.assign(container.style, {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        pointerEvents: 'none',
+        zIndex: 9999,
+      });
+      document.body.appendChild(container);
+      for (let i = 0; i < 150; i++) {
+        const c = document.createElement('div');
+        Object.assign(c.style, {
+          position: 'absolute',
+          width: '8px',
+          height: '8px',
+          background: colors[Math.floor(Math.random() * colors.length)],
+          borderRadius: '50%',
+          left: `${Math.random() * 100}vw`,
+          top: '-10px',
+        });
+        container.appendChild(c);
+        c.animate(
+          [
+            { transform: 'translateY(0)', opacity: 1 },
+            { transform: `translateY(100vh)`, opacity: 0 },
+          ],
+          {
+            duration: 2000 + Math.random() * 2000,
+            easing: 'ease-out',
+            fill: 'forwards',
+          }
+        );
+      }
+      setTimeout(() => container.remove(), 5000);
+    }
   </script>
 </body>
 </html>
